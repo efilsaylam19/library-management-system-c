@@ -1,22 +1,28 @@
+# Makefile for Library Management System
+
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c11 -pedantic
+CFLAGS = -Wall -Wextra -std=c99
 TARGET = library
-SOURCES = main.c library.c
-OBJECTS = $(SOURCES:.c=.o)
+SOURCE = library.c
 
-.PHONY: all clean run
-
+# Default target
 all: $(TARGET)
 
-$(TARGET): $(OBJECTS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJECTS)
+# Build the executable
+$(TARGET): $(SOURCE) library.h
+	$(CC) $(CFLAGS) -o $(TARGET) $(SOURCE)
 
-%.o: %.c library.h
-	$(CC) $(CFLAGS) -c $< -o $@
-
+# Clean build artifacts
 clean:
-	rm -f $(OBJECTS) $(TARGET) library.dat
+	rm -f $(TARGET) $(TARGET).exe
 
+# Run the program
 run: $(TARGET)
 	./$(TARGET)
+
+# Windows-specific targets
+windows: $(SOURCE) library.h
+	gcc $(CFLAGS) -o $(TARGET).exe $(SOURCE)
+
+.PHONY: all clean run windows
 

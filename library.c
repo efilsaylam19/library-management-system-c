@@ -1,1064 +1,664 @@
 #include "library.h"
 
-// Create a new library instance
-Library* library_create(void) {
-    Library *lib = (Library*)malloc(sizeof(Library));
-    if (lib == NULL) {
-        return NULL;
-    }
-    
-    lib->capacity = 10;
-    lib->count = 0;
-    lib->books = (Book*)malloc(lib->capacity * sizeof(Book));
-    
-    if (lib->books == NULL) {
-        free(lib);
-        return NULL;
-    }
-    
-    return lib;
+// Global variables (removed unused variable)
+
+// Clear input buffer
+void clearInputBuffer() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
 }
 
-// Destroy library and free all memory
-void library_destroy(Library *lib) {
-    if (lib != NULL) {
-        if (lib->books != NULL) {
-            free(lib->books);
+// Get integer input with validation
+int getIntInput() {
+    int value;
+    char buffer[100];
+    if (fgets(buffer, sizeof(buffer), stdin) != NULL) {
+        if (sscanf(buffer, "%d", &value) == 1) {
+            return value;
         }
-        free(lib);
     }
+    return -1;
 }
 
-// Resize library capacity if needed
-static int library_resize(Library *lib) {
-    if (lib->count >= lib->capacity) {
-        int new_capacity = lib->capacity * 2;
-        Book *new_books = (Book*)realloc(lib->books, new_capacity * sizeof(Book));
-        
-        if (new_books == NULL) {
-            return 0; // Failed to resize
-        }
-        
-        lib->books = new_books;
-        lib->capacity = new_capacity;
+// Trim whitespace from string
+void trimString(char *str) {
+    int start = 0;
+    int end = strlen(str) - 1;
+    
+    while (isspace((unsigned char)str[start])) start++;
+    while (end > start && isspace((unsigned char)str[end])) end--;
+    
+    int i;
+    for (i = 0; i <= end - start; i++) {
+        str[i] = str[start + i];
     }
-    return 1;
+    str[i] = '\0';
 }
 
-// Add a new book to the library
-int library_add_book(Library *lib, const char *title, const char *author,
-                     const char *isbn, int year) {
-    if (lib == NULL || title == NULL || author == NULL || isbn == NULL) {
-        return 0; // Invalid parameters
-    }
+// Parse semicolon-separated values (portable alternative to strtok_r)
+static void parseField(char *line, int field_num, char *output) {
+    int i = 0;
+    int current_field = 0;
+    int start = 0;
+    int len = strlen(line);
     
-    // Validate inputs
-    if (!validate_string(title, MAX_TITLE_LEN) || 
-        !validate_string(author, MAX_AUTHOR_LEN) ||
-        !validate_string(isbn, MAX_ISBN_LEN) ||
-        !validate_year(year)) {
-        return 0;
-    }
-    
-    // Check if ISBN already exists
-    if (library_find_book_by_isbn(lib, isbn) != NULL) {
-        return -1; // ISBN already exists
-    }
-    
-    // Resize if needed
-    if (!library_resize(lib)) {
-        return 0; // Memory allocation failed
-    }
-    
-    // Create new book
-    Book *new_book = &lib->books[lib->count];
-    new_book->id = get_next_id(lib);
-    strncpy(new_book->title, title, MAX_TITLE_LEN - 1);
-    new_book->title[MAX_TITLE_LEN - 1] = '\0';
-    strncpy(new_book->author, author, MAX_AUTHOR_LEN - 1);
-    new_book->author[MAX_AUTHOR_LEN - 1] = '\0';
-    strncpy(new_book->isbn, isbn, MAX_ISBN_LEN - 1);
-    new_book->isbn[MAX_ISBN_LEN - 1] = '\0';
-    new_book->year = year;
-    new_book->is_available = true;
-    new_book->borrower_id = 0;  // No borrower initially
-    
-    lib->count++;
-    return new_book->id;
-}
-
-// Remove a book from the library
-int library_remove_book(Library *lib, int id) {
-    if (lib == NULL) {
-        return 0;
-    }
-    
-    for (int i = 0; i < lib->count; i++) {
-        if (lib->books[i].id == id) {
-            // Shift remaining books to fill the gap
-            for (int j = i; j < lib->count - 1; j++) {
-                lib->books[j] = lib->books[j + 1];
+    for (i = 0; i < len; i++) {
+        if (line[i] == ';' || line[i] == '\n' || line[i] == '\r') {
+            if (current_field == field_num) {
+                int j;
+                for (j = start; j < i; j++) {
+                    output[j - start] = line[j];
+                }
+                output[j - start] = '\0';
+                return;
             }
-            lib->count--;
-            return 1; // Success
+            start = i + 1;
+            current_field++;
         }
     }
     
-    return 0; // Book not found
-}
-
-// Find book by ID
-Book* library_find_book_by_id(Library *lib, int id) {
-    if (lib == NULL) {
-        return NULL;
-    }
-    
-    for (int i = 0; i < lib->count; i++) {
-        if (lib->books[i].id == id) {
-            return &lib->books[i];
+    // Handle last field
+    if (current_field == field_num) {
+        int j;
+        for (j = start; j < len; j++) {
+            output[j - start] = line[j];
         }
+        output[len - start] = '\0';
+    } else {
+        output[0] = '\0';
     }
-    
-    return NULL;
 }
 
-// Find book by title
-Book* library_find_book_by_title(Library *lib, const char *title) {
-    if (lib == NULL || title == NULL) {
-        return NULL;
-    }
+// Register a new user
+int registerUser() {
+    User new_user;
+    FILE *file;
+    User existing_user;
+    int user_exists = 0;
     
-    for (int i = 0; i < lib->count; i++) {
-        if (strcmp(lib->books[i].title, title) == 0) {
-            return &lib->books[i];
-        }
-    }
+    printf("\n=== User Registration ===\n");
+    printf("Enter username: ");
+    fgets(new_user.username, MAX_STRING, stdin);
+    trimString(new_user.username);
     
-    return NULL;
-}
-
-// Find book by author
-Book* library_find_book_by_author(Library *lib, const char *author) {
-    if (lib == NULL || author == NULL) {
-        return NULL;
-    }
-    
-    for (int i = 0; i < lib->count; i++) {
-        if (strcmp(lib->books[i].author, author) == 0) {
-            return &lib->books[i];
-        }
-    }
-    
-    return NULL;
-}
-
-// Find book by ISBN
-Book* library_find_book_by_isbn(Library *lib, const char *isbn) {
-    if (lib == NULL || isbn == NULL) {
-        return NULL;
-    }
-    
-    for (int i = 0; i < lib->count; i++) {
-        if (strcmp(lib->books[i].isbn, isbn) == 0) {
-            return &lib->books[i];
-        }
-    }
-    
-    return NULL;
-}
-
-// Save library to binary file
-int library_save_to_file(Library *lib, const char *filename) {
-    if (lib == NULL || filename == NULL) {
+    if (strlen(new_user.username) == 0) {
+        printf("Error: Username cannot be empty!\n");
         return 0;
     }
     
-    FILE *file = fopen(filename, "wb");
+    // Check if user already exists
+    file = fopen(USERS_FILE, "r");
+    if (file != NULL) {
+        while (fscanf(file, "%s %s", existing_user.username, existing_user.password) == 2) {
+            if (strcmp(existing_user.username, new_user.username) == 0) {
+                user_exists = 1;
+                break;
+            }
+        }
+        fclose(file);
+    }
+    
+    if (user_exists) {
+        printf("Error: Username already exists!\n");
+        return 0;
+    }
+    
+    printf("Enter password: ");
+    fgets(new_user.password, MAX_STRING, stdin);
+    trimString(new_user.password);
+    
+    if (strlen(new_user.password) == 0) {
+        printf("Error: Password cannot be empty!\n");
+        return 0;
+    }
+    
+    // Save user to file
+    file = fopen(USERS_FILE, "a");
+    if (file == NULL) {
+        printf("Error: Cannot open users file for writing!\n");
+        return 0;
+    }
+    
+    fprintf(file, "%s %s\n", new_user.username, new_user.password);
+    fclose(file);
+    
+    printf("Registration successful!\n");
+    return 1;
+}
+
+// Login as user
+int loginUser(char *username) {
+    char input_username[MAX_STRING];
+    char input_password[MAX_STRING];
+    User user;
+    FILE *file;
+    
+    printf("\n=== User Login ===\n");
+    printf("Enter username: ");
+    fgets(input_username, MAX_STRING, stdin);
+    trimString(input_username);
+    
+    printf("Enter password: ");
+    fgets(input_password, MAX_STRING, stdin);
+    trimString(input_password);
+    
+    file = fopen(USERS_FILE, "r");
+    if (file == NULL) {
+        printf("Error: Cannot open users file!\n");
+        return 0;
+    }
+    
+    while (fscanf(file, "%s %s", user.username, user.password) == 2) {
+        if (strcmp(user.username, input_username) == 0 && 
+            strcmp(user.password, input_password) == 0) {
+            strcpy(username, input_username);
+            fclose(file);
+            printf("Login successful! Welcome, %s!\n", username);
+            return 1;
+        }
+    }
+    
+    fclose(file);
+    printf("Error: Invalid username or password!\n");
+    return 0;
+}
+
+// Login as admin
+int loginAdmin() {
+    char input_username[MAX_STRING];
+    char input_password[MAX_STRING];
+    
+    printf("\n=== Admin Login ===\n");
+    printf("Enter username: ");
+    fgets(input_username, MAX_STRING, stdin);
+    trimString(input_username);
+    
+    printf("Enter password: ");
+    fgets(input_password, MAX_STRING, stdin);
+    trimString(input_password);
+    
+    if (strcmp(input_username, ADMIN_USERNAME) == 0 && 
+        strcmp(input_password, ADMIN_PASSWORD) == 0) {
+        printf("Admin login successful!\n");
+        return 1;
+    }
+    
+    printf("Error: Invalid admin credentials!\n");
+    return 0;
+}
+
+// Display authentication menu
+void displayAuthMenu() {
+    printf("\n");
+    printf("========================================\n");
+    printf("    Library Management System\n");
+    printf("========================================\n");
+    printf("1. Register\n");
+    printf("2. Login (User)\n");
+    printf("3. Login (Admin)\n");
+    printf("4. Exit\n");
+    printf("========================================\n");
+    printf("Enter your choice: ");
+}
+
+// Load all books from books.txt
+int loadBooks(Book books[], int max_books) {
+    FILE *file = fopen(BOOKS_FILE, "r");
+    int count = 0;
+    char line[MAX_STRING * 3];
+    
     if (file == NULL) {
         return 0;
     }
     
-    // Write count first
-    if (fwrite(&lib->count, sizeof(int), 1, file) != 1) {
-        fclose(file);
+    while (fgets(line, sizeof(line), file) != NULL && count < max_books) {
+        // Format: id;title;author
+        char field[MAX_STRING];
+        
+        parseField(line, 0, field);
+        trimString(field);
+        if (strlen(field) == 0) continue;
+        books[count].id = atoi(field);
+        
+        parseField(line, 1, field);
+        trimString(field);
+        if (strlen(field) == 0) continue;
+        strcpy(books[count].title, field);
+        
+        parseField(line, 2, field);
+        trimString(field);
+        if (strlen(field) == 0) continue;
+        strcpy(books[count].author, field);
+        
+        count++;
+    }
+    
+    fclose(file);
+    return count;
+}
+
+// Load available books from available_books.txt
+int loadAvailableBooks(Book books[], int max_books) {
+    FILE *file = fopen(AVAILABLE_BOOKS_FILE, "r");
+    int count = 0;
+    char line[MAX_STRING * 3];
+    
+    if (file == NULL) {
         return 0;
     }
     
-    // Write all books
-    if (lib->count > 0) {
-        size_t written = fwrite(lib->books, sizeof(Book), lib->count, file);
-        if (written != (size_t)lib->count) {
-            fclose(file);
-            return 0;
-        }
+    while (fgets(line, sizeof(line), file) != NULL && count < max_books) {
+        char field[MAX_STRING];
+        
+        parseField(line, 0, field);
+        trimString(field);
+        if (strlen(field) == 0) continue;
+        books[count].id = atoi(field);
+        
+        parseField(line, 1, field);
+        trimString(field);
+        if (strlen(field) == 0) continue;
+        strcpy(books[count].title, field);
+        
+        parseField(line, 2, field);
+        trimString(field);
+        if (strlen(field) == 0) continue;
+        strcpy(books[count].author, field);
+        
+        count++;
+    }
+    
+    fclose(file);
+    return count;
+}
+
+// Save available books to file
+int saveAvailableBooks(Book books[], int count) {
+    FILE *file = fopen(AVAILABLE_BOOKS_FILE, "w");
+    int i;
+    
+    if (file == NULL) {
+        return 0;
+    }
+    
+    for (i = 0; i < count; i++) {
+        fprintf(file, "%d;%s;%s\n", books[i].id, books[i].title, books[i].author);
     }
     
     fclose(file);
     return 1;
 }
 
-// Load library from binary file
-int library_load_from_file(Library *lib, const char *filename) {
-    if (lib == NULL || filename == NULL) {
-        return 0;
-    }
+// Load borrowed books from borrowed_books.txt
+int loadBorrowedBooks(BorrowedBook borrowed[], int max_borrowed) {
+    FILE *file = fopen(BORROWED_BOOKS_FILE, "r");
+    int count = 0;
+    char line[MAX_STRING * 4];
     
-    FILE *file = fopen(filename, "rb");
     if (file == NULL) {
-        return 0; // File doesn't exist or can't be opened
-    }
-    
-    // Read count
-    int count;
-    if (fread(&count, sizeof(int), 1, file) != 1) {
-        fclose(file);
         return 0;
     }
     
-    if (count < 0 || count > 100000) { // Sanity check
-        fclose(file);
+    while (fgets(line, sizeof(line), file) != NULL && count < max_borrowed) {
+        // Format: username;book_id;title;author
+        char field[MAX_STRING];
+        
+        parseField(line, 0, field);
+        trimString(field);
+        if (strlen(field) == 0) continue;
+        strcpy(borrowed[count].username, field);
+        
+        parseField(line, 1, field);
+        trimString(field);
+        if (strlen(field) == 0) continue;
+        borrowed[count].book_id = atoi(field);
+        
+        parseField(line, 2, field);
+        trimString(field);
+        if (strlen(field) == 0) continue;
+        strcpy(borrowed[count].title, field);
+        
+        parseField(line, 3, field);
+        trimString(field);
+        if (strlen(field) == 0) continue;
+        strcpy(borrowed[count].author, field);
+        
+        count++;
+    }
+    
+    fclose(file);
+    return count;
+}
+
+// Save borrowed books to file
+int saveBorrowedBooks(BorrowedBook borrowed[], int count) {
+    FILE *file = fopen(BORROWED_BOOKS_FILE, "w");
+    int i;
+    
+    if (file == NULL) {
         return 0;
     }
     
-    // Resize library if needed
-    while (lib->capacity < count) {
-        if (!library_resize(lib)) {
-            fclose(file);
-            return 0;
-        }
+    for (i = 0; i < count; i++) {
+        fprintf(file, "%s;%d;%s;%s\n", 
+                borrowed[i].username, 
+                borrowed[i].book_id, 
+                borrowed[i].title, 
+                borrowed[i].author);
     }
     
-    // Read all books
-    if (count > 0) {
-        size_t read = fread(lib->books, sizeof(Book), count, file);
-        if (read != (size_t)count) {
-            fclose(file);
-            return 0;
-        }
-    }
-    
-    lib->count = count;
     fclose(file);
     return 1;
 }
 
-// Load library from text file (books.txt format: id;title;author)
-int library_load_from_txt(Library *lib, const char *filename) {
-    if (lib == NULL || filename == NULL) {
-        return 0;
+// Initialize available_books.txt from books.txt if it doesn't exist
+void initializeAvailableBooks() {
+    FILE *available_file = fopen(AVAILABLE_BOOKS_FILE, "r");
+    if (available_file != NULL) {
+        fclose(available_file);
+        return; // File exists, no need to initialize
     }
     
-    FILE *file = fopen(filename, "r");
-    if (file == NULL) {
-        return 0; // File doesn't exist or can't be opened
+    // Copy books.txt to available_books.txt
+    FILE *books_file = fopen(BOOKS_FILE, "r");
+    if (books_file == NULL) {
+        return; // books.txt doesn't exist yet
     }
     
-    char line[500];
-    int loaded_count = 0;
-    
-    // Read line by line
-    while (fgets(line, sizeof(line), file) != NULL) {
-        // Remove newline
-        size_t len = strlen(line);
-        if (len > 0 && line[len - 1] == '\n') {
-            line[len - 1] = '\0';
-            len--;
-        }
-        
-        if (len == 0) continue;
-        
-        // Parse line: id;title;author
-        int id;
-        char title[MAX_TITLE_LEN];
-        char author[MAX_AUTHOR_LEN];
-        
-        // Find first semicolon
-        char *first_semi = strchr(line, ';');
-        if (first_semi == NULL) continue;
-        
-        // Find second semicolon
-        char *second_semi = strchr(first_semi + 1, ';');
-        if (second_semi == NULL) continue;
-        
-        // Extract id
-        *first_semi = '\0';
-        if (sscanf(line, "%d", &id) != 1) {
-            *first_semi = ';';
-            continue;
-        }
-        
-        // Extract title
-        *second_semi = '\0';
-        strncpy(title, first_semi + 1, MAX_TITLE_LEN - 1);
-        title[MAX_TITLE_LEN - 1] = '\0';
-        
-        // Extract author
-        strncpy(author, second_semi + 1, MAX_AUTHOR_LEN - 1);
-        author[MAX_AUTHOR_LEN - 1] = '\0';
-        
-        // Check if book with this ID already exists
-        Book *existing = library_find_book_by_id(lib, id);
-        if (existing != NULL) {
-            continue; // Skip if already exists
-        }
-        
-        // Generate ISBN (simple format: ISBN-XXXX where XXXX is ID)
-        char isbn[MAX_ISBN_LEN];
-        snprintf(isbn, MAX_ISBN_LEN, "ISBN-%04d", id);
-        
-        // Resize if needed
-        if (!library_resize(lib)) {
-            continue; // Skip if resize fails
-        }
-        
-        // Create new book directly with the ID from file
-        Book *new_book = &lib->books[lib->count];
-        new_book->id = id;
-        strncpy(new_book->title, title, MAX_TITLE_LEN - 1);
-        new_book->title[MAX_TITLE_LEN - 1] = '\0';
-        strncpy(new_book->author, author, MAX_AUTHOR_LEN - 1);
-        new_book->author[MAX_AUTHOR_LEN - 1] = '\0';
-        strncpy(new_book->isbn, isbn, MAX_ISBN_LEN - 1);
-        new_book->isbn[MAX_ISBN_LEN - 1] = '\0';
-        new_book->year = 0; // Default year
-        new_book->is_available = true;
-        new_book->borrower_id = 0;
-        
-        lib->count++;
-        loaded_count++;
+    available_file = fopen(AVAILABLE_BOOKS_FILE, "w");
+    if (available_file == NULL) {
+        fclose(books_file);
+        return;
     }
     
-    fclose(file);
-    return loaded_count;
+    char line[MAX_STRING * 3];
+    while (fgets(line, sizeof(line), books_file) != NULL) {
+        fputs(line, available_file);
+    }
+    
+    fclose(books_file);
+    fclose(available_file);
 }
 
 // Display all books
-void library_display_all(Library *lib) {
-    if (lib == NULL) {
-        printf("Library is NULL.\n");
+void displayAllBooks() {
+    Book books[MAX_BOOKS];
+    int count = loadBooks(books, MAX_BOOKS);
+    int i;
+    
+    printf("\n=== All Books ===\n");
+    if (count == 0) {
+        printf("No books found in the system.\n");
         return;
     }
     
-    if (lib->count == 0) {
-        printf("No books in the library.\n");
-        return;
-    }
-    
-    printf("\n=== ALL BOOKS ===\n");
-    printf("%-5s %-30s %-25s %-15s %-6s %-10s\n", 
-           "ID", "Title", "Author", "ISBN", "Year", "Status");
-    printf("--------------------------------------------------------------------------------\n");
-    
-    for (int i = 0; i < lib->count; i++) {
-        library_display_book(&lib->books[i]);
+    printf("%-5s %-40s %-30s\n", "ID", "Title", "Author");
+    printf("----------------------------------------------------------------------------\n");
+    for (i = 0; i < count; i++) {
+        printf("%-5d %-40s %-30s\n", books[i].id, books[i].title, books[i].author);
     }
     printf("\n");
-}
-
-// Display a single book
-void library_display_book(const Book *book) {
-    if (book == NULL) {
-        printf("Book is NULL.\n");
-        return;
-    }
-    
-    if (book->is_available) {
-        printf("%-5d %-30s %-25s %-15s %-6d %-10s\n",
-               book->id,
-               book->title,
-               book->author,
-               book->isbn,
-               book->year,
-               "Available");
-    } else {
-        printf("%-5d %-30s %-25s %-15s %-6d %-10s (User ID: %d)\n",
-               book->id,
-               book->title,
-               book->author,
-               book->isbn,
-               book->year,
-               "Borrowed",
-               book->borrower_id);
-    }
 }
 
 // Display available books
-void library_display_available(Library *lib) {
-    if (lib == NULL) {
-        printf("Library is NULL.\n");
+void displayAvailableBooks() {
+    Book books[MAX_BOOKS];
+    int count = loadAvailableBooks(books, MAX_BOOKS);
+    int i;
+    
+    printf("\n=== Available Books ===\n");
+    if (count == 0) {
+        printf("No books available at the moment.\n");
         return;
     }
     
-    int available_count = 0;
-    printf("\n=== AVAILABLE BOOKS ===\n");
-    printf("%-5s %-30s %-25s %-15s %-6s\n", 
-           "ID", "Title", "Author", "ISBN", "Year");
-    printf("--------------------------------------------------------------------------------\n");
-    
-    for (int i = 0; i < lib->count; i++) {
-        if (lib->books[i].is_available) {
-            printf("%-5d %-30s %-25s %-15s %-6d\n",
-                   lib->books[i].id,
-                   lib->books[i].title,
-                   lib->books[i].author,
-                   lib->books[i].isbn,
-                   lib->books[i].year);
-            available_count++;
-        }
-    }
-    
-    if (available_count == 0) {
-        printf("No available books.\n");
-    }
-    printf("\n");
-}
-
-// Display borrowed books
-void library_display_borrowed(Library *lib) {
-    if (lib == NULL) {
-        printf("Library is NULL.\n");
-        return;
-    }
-    
-    int borrowed_count = 0;
-    printf("\n=== BORROWED BOOKS ===\n");
-    printf("%-5s %-30s %-25s %-15s %-6s\n", 
-           "ID", "Title", "Author", "ISBN", "Year");
-    printf("--------------------------------------------------------------------------------\n");
-    
-    for (int i = 0; i < lib->count; i++) {
-        if (!lib->books[i].is_available) {
-            printf("%-5d %-30s %-25s %-15s %-6d\n",
-                   lib->books[i].id,
-                   lib->books[i].title,
-                   lib->books[i].author,
-                   lib->books[i].isbn,
-                   lib->books[i].year);
-            borrowed_count++;
-        }
-    }
-    
-    if (borrowed_count == 0) {
-        printf("No borrowed books.\n");
+    printf("%-5s %-40s %-30s\n", "ID", "Title", "Author");
+    printf("----------------------------------------------------------------------------\n");
+    for (i = 0; i < count; i++) {
+        printf("%-5d %-40s %-30s\n", books[i].id, books[i].title, books[i].author);
     }
     printf("\n");
 }
 
 // Borrow a book
-int book_borrow(Library *lib, int book_id, int user_id) {
-    if (lib == NULL || user_id <= 0) {
-        return 0;
+void borrowBook(const char *username) {
+    Book available_books[MAX_BOOKS];
+    BorrowedBook borrowed[MAX_BORROWED];
+    int available_count, borrowed_count;
+    int book_id, i, j;
+    int found = 0;
+    
+    printf("\n=== Borrow a Book ===\n");
+    displayAvailableBooks();
+    
+    printf("Enter book ID to borrow: ");
+    book_id = getIntInput();
+    clearInputBuffer();
+    
+    if (book_id <= 0) {
+        printf("Error: Invalid book ID!\n");
+        return;
     }
     
-    Book *book = library_find_book_by_id(lib, book_id);
-    if (book == NULL) {
-        return -1; // Book not found
+    // Load available books
+    available_count = loadAvailableBooks(available_books, MAX_BOOKS);
+    
+    // Find the book in available books
+    for (i = 0; i < available_count; i++) {
+        if (available_books[i].id == book_id) {
+            found = 1;
+            break;
+        }
     }
     
-    if (!book->is_available) {
-        return -2; // Book already borrowed
+    if (!found) {
+        printf("Error: Book ID %d is not available for borrowing!\n", book_id);
+        return;
     }
     
-    // Update book status
-    book->is_available = false;
-    book->borrower_id = user_id;
+    // Get selected book details
+    Book selected_book = available_books[i];
     
-    // Add to user's borrowing record file
-    if (!user_borrow_record_add(user_id, book)) {
-        // Rollback if file operation fails
-        book->is_available = true;
-        book->borrower_id = 0;
-        return -3; // Failed to update user record
+    // Load borrowed books
+    borrowed_count = loadBorrowedBooks(borrowed, MAX_BORROWED);
+    
+    // Add to borrowed books
+    strcpy(borrowed[borrowed_count].username, username);
+    borrowed[borrowed_count].book_id = selected_book.id;
+    strcpy(borrowed[borrowed_count].title, selected_book.title);
+    strcpy(borrowed[borrowed_count].author, selected_book.author);
+    borrowed_count++;
+    
+    // Remove from available books
+    for (j = i; j < available_count - 1; j++) {
+        available_books[j] = available_books[j + 1];
     }
+    available_count--;
     
-    return 1; // Success
+    // Save changes
+    if (saveAvailableBooks(available_books, available_count) && 
+        saveBorrowedBooks(borrowed, borrowed_count)) {
+        printf("Successfully borrowed: %s by %s\n", selected_book.title, selected_book.author);
+    } else {
+        printf("Error: Failed to save changes!\n");
+    }
 }
 
 // Return a book
-int book_return(Library *lib, int book_id, int user_id) {
-    if (lib == NULL || user_id <= 0) {
-        return 0;
-    }
+void returnBook(const char *username) {
+    BorrowedBook borrowed[MAX_BORROWED];
+    Book available_books[MAX_BOOKS];
+    int borrowed_count, available_count;
+    int i, j;
+    int book_id;
+    int found = 0;
     
-    Book *book = library_find_book_by_id(lib, book_id);
-    if (book == NULL) {
-        return -1; // Book not found
-    }
+    printf("\n=== Return a Book ===\n");
+    displayMyBorrowedBooks(username);
     
-    if (book->is_available) {
-        return -2; // Book already available
-    }
+    printf("Enter book ID to return: ");
+    book_id = getIntInput();
+    clearInputBuffer();
     
-    // Verify the book is borrowed by this user
-    if (book->borrower_id != user_id) {
-        return -3; // Book is not borrowed by this user
-    }
-    
-    // Remove from user's borrowing record file
-    if (!user_borrow_record_remove(user_id, book_id)) {
-        return -4; // Failed to update user record
-    }
-    
-    // Update book status
-    book->is_available = true;
-    book->borrower_id = 0;
-    
-    return 1; // Success
-}
-
-// Update book information
-int book_update(Library *lib, int id, const char *title, const char *author,
-                const char *isbn, int year) {
-    if (lib == NULL || title == NULL || author == NULL || isbn == NULL) {
-        return 0;
-    }
-    
-    Book *book = library_find_book_by_id(lib, id);
-    if (book == NULL) {
-        return -1; // Book not found
-    }
-    
-    // Validate inputs
-    if (!validate_string(title, MAX_TITLE_LEN) || 
-        !validate_string(author, MAX_AUTHOR_LEN) ||
-        !validate_string(isbn, MAX_ISBN_LEN) ||
-        !validate_year(year)) {
-        return 0;
-    }
-    
-    // Check if ISBN already exists (and it's not the current book)
-    Book *existing = library_find_book_by_isbn(lib, isbn);
-    if (existing != NULL && existing->id != id) {
-        return -2; // ISBN already exists for another book
-    }
-    
-    // Update book information
-    strncpy(book->title, title, MAX_TITLE_LEN - 1);
-    book->title[MAX_TITLE_LEN - 1] = '\0';
-    strncpy(book->author, author, MAX_AUTHOR_LEN - 1);
-    book->author[MAX_AUTHOR_LEN - 1] = '\0';
-    strncpy(book->isbn, isbn, MAX_ISBN_LEN - 1);
-    book->isbn[MAX_ISBN_LEN - 1] = '\0';
-    book->year = year;
-    
-    return 1; // Success
-}
-
-// Validate ISBN (basic validation - not empty and reasonable length)
-bool validate_isbn(const char *isbn) {
-    if (isbn == NULL || strlen(isbn) == 0 || strlen(isbn) >= MAX_ISBN_LEN) {
-        return false;
-    }
-    return true;
-}
-
-// Validate year (reasonable range)
-bool validate_year(int year) {
-    return year >= 0 && year <= 9999;
-}
-
-// Validate string (not empty and within max length)
-bool validate_string(const char *str, int max_len) {
-    if (str == NULL) {
-        return false;
-    }
-    size_t len = strlen(str);
-    if (len == 0 || len >= (size_t)max_len) {
-        return false;
-    }
-    return true;
-}
-
-// Get next available ID
-int get_next_id(Library *lib) {
-    if (lib == NULL || lib->count == 0) {
-        return 1;
-    }
-    
-    int max_id = 0;
-    for (int i = 0; i < lib->count; i++) {
-        if (lib->books[i].id > max_id) {
-            max_id = lib->books[i].id;
-        }
-    }
-    
-    return max_id + 1;
-}
-
-// ==================== USER MANAGEMENT FUNCTIONS ====================
-
-// Create a new user manager instance
-UserManager* user_manager_create(void) {
-    UserManager *um = (UserManager*)malloc(sizeof(UserManager));
-    if (um == NULL) {
-        return NULL;
-    }
-    
-    um->capacity = 10;
-    um->count = 0;
-    um->users = (User*)malloc(um->capacity * sizeof(User));
-    
-    if (um->users == NULL) {
-        free(um);
-        return NULL;
-    }
-    
-    return um;
-}
-
-// Destroy user manager and free all memory
-void user_manager_destroy(UserManager *um) {
-    if (um != NULL) {
-        if (um->users != NULL) {
-            free(um->users);
-        }
-        free(um);
-    }
-}
-
-// Resize user manager capacity if needed
-static int user_manager_resize(UserManager *um) {
-    if (um->count >= um->capacity) {
-        int new_capacity = um->capacity * 2;
-        User *new_users = (User*)realloc(um->users, new_capacity * sizeof(User));
-        
-        if (new_users == NULL) {
-            return 0; // Failed to resize
-        }
-        
-        um->users = new_users;
-        um->capacity = new_capacity;
-    }
-    return 1;
-}
-
-// Add a new user
-int user_add(UserManager *um, const char *username, const char *name, const char *password, UserRole role) {
-    if (um == NULL || username == NULL || name == NULL || password == NULL) {
-        return 0; // Invalid parameters
-    }
-    
-    // Validate inputs
-    if (!validate_string(username, MAX_USERNAME_LEN) || 
-        !validate_string(name, MAX_NAME_LEN) ||
-        !validate_string(password, MAX_PASSWORD_LEN)) {
-        return 0;
-    }
-    
-    // Check if username already exists
-    if (user_find_by_username(um, username) != NULL) {
-        return -1; // Username already exists
-    }
-    
-    // Resize if needed
-    if (!user_manager_resize(um)) {
-        return 0; // Memory allocation failed
-    }
-    
-    // Create new user
-    User *new_user = &um->users[um->count];
-    new_user->id = get_next_user_id(um);
-    strncpy(new_user->username, username, MAX_USERNAME_LEN - 1);
-    new_user->username[MAX_USERNAME_LEN - 1] = '\0';
-    strncpy(new_user->name, name, MAX_NAME_LEN - 1);
-    new_user->name[MAX_NAME_LEN - 1] = '\0';
-    strncpy(new_user->password, password, MAX_PASSWORD_LEN - 1);
-    new_user->password[MAX_PASSWORD_LEN - 1] = '\0';
-    new_user->role = role;
-    
-    um->count++;
-    return new_user->id;
-}
-
-// Find user by ID
-User* user_find_by_id(UserManager *um, int id) {
-    if (um == NULL) {
-        return NULL;
-    }
-    
-    for (int i = 0; i < um->count; i++) {
-        if (um->users[i].id == id) {
-            return &um->users[i];
-        }
-    }
-    
-    return NULL;
-}
-
-// Find user by username
-User* user_find_by_username(UserManager *um, const char *username) {
-    if (um == NULL || username == NULL) {
-        return NULL;
-    }
-    
-    for (int i = 0; i < um->count; i++) {
-        if (strcmp(um->users[i].username, username) == 0) {
-            return &um->users[i];
-        }
-    }
-    
-    return NULL;
-}
-
-// Save users to text file
-int user_save_to_file(UserManager *um, const char *filename) {
-    if (um == NULL || filename == NULL) {
-        return 0;
-    }
-    
-    FILE *file = fopen(filename, "w");
-    if (file == NULL) {
-        return 0;
-    }
-    
-    // Write all users in format: id|username|name|password|role
-    for (int i = 0; i < um->count; i++) {
-        fprintf(file, "%d|%s|%s|%s|%d\n",
-                um->users[i].id,
-                um->users[i].username,
-                um->users[i].name,
-                um->users[i].password,
-                um->users[i].role);
-    }
-    
-    fclose(file);
-    return 1;
-}
-
-// Load users from text file
-int user_load_from_file(UserManager *um, const char *filename) {
-    if (um == NULL || filename == NULL) {
-        return 0;
-    }
-    
-    FILE *file = fopen(filename, "r");
-    if (file == NULL) {
-        return 0; // File doesn't exist or can't be opened
-    }
-    
-    char line[500];
-    int count = 0;
-    
-    // Read line by line
-    while (fgets(line, sizeof(line), file) != NULL) {
-        // Remove newline
-        size_t len = strlen(line);
-        if (len > 0 && line[len - 1] == '\n') {
-            line[len - 1] = '\0';
-            len--;
-        }
-        
-        if (len == 0) continue;
-        
-        // Parse line: id|username|name|password|role
-        int id, role;
-        char username[MAX_USERNAME_LEN];
-        char name[MAX_NAME_LEN];
-        char password[MAX_PASSWORD_LEN];
-        
-        if (sscanf(line, "%d|%49[^|]|%99[^|]|%49[^|]|%d",
-                   &id, username, name, password, &role) != 5) {
-            continue; // Skip invalid lines
-        }
-        
-        // Resize if needed
-        if (count >= um->capacity) {
-            if (!user_manager_resize(um)) {
-                fclose(file);
-                return 0;
-            }
-        }
-        
-        // Add user
-        User *new_user = &um->users[count];
-        new_user->id = id;
-        strncpy(new_user->username, username, MAX_USERNAME_LEN - 1);
-        new_user->username[MAX_USERNAME_LEN - 1] = '\0';
-        strncpy(new_user->name, name, MAX_NAME_LEN - 1);
-        new_user->name[MAX_NAME_LEN - 1] = '\0';
-        strncpy(new_user->password, password, MAX_PASSWORD_LEN - 1);
-        new_user->password[MAX_PASSWORD_LEN - 1] = '\0';
-        new_user->role = (UserRole)role;
-        
-        count++;
-    }
-    
-    um->count = count;
-    fclose(file);
-    return 1;
-}
-
-// Get next available user ID
-int get_next_user_id(UserManager *um) {
-    if (um == NULL || um->count == 0) {
-        return 1;
-    }
-    
-    int max_id = 0;
-    for (int i = 0; i < um->count; i++) {
-        if (um->users[i].id > max_id) {
-            max_id = um->users[i].id;
-        }
-    }
-    
-    return max_id + 1;
-}
-
-// ==================== AUTHENTICATION FUNCTIONS ====================
-
-// Login function
-int user_login(UserManager *um, const char *username, const char *password, User **logged_user) {
-    if (um == NULL || username == NULL || password == NULL || logged_user == NULL) {
-        return 0;
-    }
-    
-    // Check for admin login
-    if (strcmp(username, ADMIN_USERNAME) == 0 && strcmp(password, ADMIN_PASSWORD) == 0) {
-        // Create temporary admin user
-        static User admin_user;
-        admin_user.id = 0;
-        strncpy(admin_user.username, ADMIN_USERNAME, MAX_USERNAME_LEN - 1);
-        admin_user.username[MAX_USERNAME_LEN - 1] = '\0';
-        strncpy(admin_user.name, "Administrator", MAX_NAME_LEN - 1);
-        admin_user.name[MAX_NAME_LEN - 1] = '\0';
-        admin_user.role = ROLE_ADMIN;
-        *logged_user = &admin_user;
-        return 1;
-    }
-    
-    // Check regular users
-    User *user = user_find_by_username(um, username);
-    if (user != NULL && strcmp(user->password, password) == 0) {
-        *logged_user = user;
-        return 1;
-    }
-    
-    return 0; // Invalid credentials
-}
-
-// Register new user
-int user_register(UserManager *um, const char *username, const char *name, const char *password) {
-    if (um == NULL || username == NULL || name == NULL || password == NULL) {
-        return 0;
-    }
-    
-    // Check if username is admin
-    if (strcmp(username, ADMIN_USERNAME) == 0) {
-        return -2; // Cannot register as admin
-    }
-    
-    // Validate inputs
-    if (!validate_string(username, MAX_USERNAME_LEN) || 
-        !validate_string(name, MAX_NAME_LEN) ||
-        !validate_string(password, MAX_PASSWORD_LEN)) {
-        return 0;
-    }
-    
-    // Check if username already exists
-    if (user_find_by_username(um, username) != NULL) {
-        return -1; // Username already exists
-    }
-    
-    // Add user with ROLE_USER
-    int result = user_add(um, username, name, password, ROLE_USER);
-    if (result > 0) {
-        user_save_to_file(um, USERS_FILENAME);
-    }
-    
-    return result;
-}
-
-// Check if user is admin
-bool is_admin(const User *user) {
-    if (user == NULL) {
-        return false;
-    }
-    return user->role == ROLE_ADMIN;
-}
-
-// ==================== USER BORROWING RECORDS ====================
-
-// Get filename for user's borrowing record
-char* get_user_filename(int user_id) {
-    static char filename[50];
-    snprintf(filename, sizeof(filename), "user_%d_books.dat", user_id);
-    return filename;
-}
-
-// Add a book to user's borrowing record file
-int user_borrow_record_add(int user_id, const Book *book) {
-    if (book == NULL || user_id <= 0) {
-        return 0;
-    }
-    
-    char *filename = get_user_filename(user_id);
-    FILE *file = fopen(filename, "ab"); // Append mode
-    if (file == NULL) {
-        return 0;
-    }
-    
-    // Create borrow record
-    BorrowRecord record;
-    record.book_id = book->id;
-    strncpy(record.title, book->title, MAX_TITLE_LEN - 1);
-    record.title[MAX_TITLE_LEN - 1] = '\0';
-    strncpy(record.author, book->author, MAX_AUTHOR_LEN - 1);
-    record.author[MAX_AUTHOR_LEN - 1] = '\0';
-    strncpy(record.isbn, book->isbn, MAX_ISBN_LEN - 1);
-    record.isbn[MAX_ISBN_LEN - 1] = '\0';
-    record.year = book->year;
-    
-    // Write record
-    if (fwrite(&record, sizeof(BorrowRecord), 1, file) != 1) {
-        fclose(file);
-        return 0;
-    }
-    
-    fclose(file);
-    return 1;
-}
-
-// Remove a book from user's borrowing record file
-int user_borrow_record_remove(int user_id, int book_id) {
-    if (user_id <= 0 || book_id <= 0) {
-        return 0;
-    }
-    
-    char *filename = get_user_filename(user_id);
-    FILE *file = fopen(filename, "rb");
-    if (file == NULL) {
-        return 0; // File doesn't exist
-    }
-    
-    // Read all records
-    BorrowRecord *records = NULL;
-    int count = 0;
-    int capacity = 10;
-    records = (BorrowRecord*)malloc(capacity * sizeof(BorrowRecord));
-    
-    if (records == NULL) {
-        fclose(file);
-        return 0;
-    }
-    
-    BorrowRecord record;
-    while (fread(&record, sizeof(BorrowRecord), 1, file) == 1) {
-        if (count >= capacity) {
-            capacity *= 2;
-            BorrowRecord *new_records = (BorrowRecord*)realloc(records, capacity * sizeof(BorrowRecord));
-            if (new_records == NULL) {
-                free(records);
-                fclose(file);
-                return 0;
-            }
-            records = new_records;
-        }
-        
-        // Only keep records that don't match the book_id to remove
-        if (record.book_id != book_id) {
-            records[count++] = record;
-        }
-    }
-    fclose(file);
-    
-    // Write back all records except the removed one
-    file = fopen(filename, "wb");
-    if (file == NULL) {
-        free(records);
-        return 0;
-    }
-    
-    if (count > 0) {
-        if (fwrite(records, sizeof(BorrowRecord), count, file) != (size_t)count) {
-            free(records);
-            fclose(file);
-            return 0;
-        }
-    }
-    
-    free(records);
-    fclose(file);
-    return 1;
-}
-
-// Load user's borrowing records
-int user_borrow_record_load(int user_id, BorrowRecord **records, int *count) {
-    if (user_id <= 0 || records == NULL || count == NULL) {
-        return 0;
-    }
-    
-    char *filename = get_user_filename(user_id);
-    FILE *file = fopen(filename, "rb");
-    if (file == NULL) {
-        *records = NULL;
-        *count = 0;
-        return 1; // File doesn't exist, but that's okay
-    }
-    
-    // Count records
-    fseek(file, 0, SEEK_END);
-    long file_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    
-    *count = (int)(file_size / sizeof(BorrowRecord));
-    
-    if (*count == 0) {
-        *records = NULL;
-        fclose(file);
-        return 1;
-    }
-    
-    // Allocate memory
-    *records = (BorrowRecord*)malloc(*count * sizeof(BorrowRecord));
-    if (*records == NULL) {
-        fclose(file);
-        return 0;
-    }
-    
-    // Read all records
-    size_t read = fread(*records, sizeof(BorrowRecord), *count, file);
-    fclose(file);
-    
-    if (read != (size_t)*count) {
-        free(*records);
-        *records = NULL;
-        *count = 0;
-        return 0;
-    }
-    
-    return 1;
-}
-
-// Display user's borrowing records
-void user_borrow_record_display(int user_id) {
-    BorrowRecord *records = NULL;
-    int count = 0;
-    
-    if (!user_borrow_record_load(user_id, &records, &count)) {
-        printf("Error loading borrowing records.\n");
+    if (book_id <= 0) {
+        printf("Error: Invalid book ID!\n");
         return;
     }
     
-    if (count == 0 || records == NULL) {
-        printf("No borrowed books for this user.\n");
+    // Load borrowed books
+    borrowed_count = loadBorrowedBooks(borrowed, MAX_BORROWED);
+    
+    // Find the book borrowed by this user
+    for (i = 0; i < borrowed_count; i++) {
+        if (strcmp(borrowed[i].username, username) == 0 && borrowed[i].book_id == book_id) {
+            found = 1;
+            break;
+        }
+    }
+    
+    if (!found) {
+        printf("Error: You haven't borrowed book ID %d!\n", book_id);
         return;
     }
     
-    printf("\n=== BORROWED BOOKS (User ID: %d) ===\n", user_id);
-    printf("%-5s %-30s %-25s %-15s %-6s\n", 
-           "ID", "Title", "Author", "ISBN", "Year");
-    printf("--------------------------------------------------------------------------------\n");
+    // Save book details before removing
+    int return_book_id = borrowed[i].book_id;
+    char return_title[MAX_STRING];
+    char return_author[MAX_STRING];
+    strcpy(return_title, borrowed[i].title);
+    strcpy(return_author, borrowed[i].author);
     
-    for (int i = 0; i < count; i++) {
-        printf("%-5d %-30s %-25s %-15s %-6d\n",
-               records[i].book_id,
-               records[i].title,
-               records[i].author,
-               records[i].isbn,
-               records[i].year);
+    // Load available books
+    available_count = loadAvailableBooks(available_books, MAX_BOOKS);
+    
+    // Add back to available books
+    available_books[available_count].id = return_book_id;
+    strcpy(available_books[available_count].title, return_title);
+    strcpy(available_books[available_count].author, return_author);
+    available_count++;
+    
+    // Remove from borrowed books
+    for (j = i; j < borrowed_count - 1; j++) {
+        borrowed[j] = borrowed[j + 1];
+    }
+    borrowed_count--;
+    
+    // Save changes
+    if (saveAvailableBooks(available_books, available_count) && 
+        saveBorrowedBooks(borrowed, borrowed_count)) {
+        printf("Successfully returned: %s by %s\n", return_title, return_author);
+    } else {
+        printf("Error: Failed to save changes!\n");
+    }
+}
+
+// Display user's borrowed books
+void displayMyBorrowedBooks(const char *username) {
+    BorrowedBook borrowed[MAX_BORROWED];
+    int count = loadBorrowedBooks(borrowed, MAX_BORROWED);
+    int i;
+    int found = 0;
+    
+    printf("\n=== My Borrowed Books ===\n");
+    
+    for (i = 0; i < count; i++) {
+        if (strcmp(borrowed[i].username, username) == 0) {
+            if (!found) {
+                printf("%-5s %-40s %-30s\n", "ID", "Title", "Author");
+                printf("----------------------------------------------------------------------------\n");
+                found = 1;
+            }
+            printf("%-5d %-40s %-30s\n", borrowed[i].book_id, borrowed[i].title, borrowed[i].author);
+        }
     }
     
+    if (!found) {
+        printf("You haven't borrowed any books yet.\n");
+    }
     printf("\n");
-    free(records);
+}
+
+// Display user menu
+void displayUserMenu(const char *username) {
+    int choice;
+    
+    while (1) {
+        printf("\n");
+        printf("========================================\n");
+        printf("    Welcome, %s!\n", username);
+        printf("========================================\n");
+        printf("1. Display all books\n");
+        printf("2. Display available books\n");
+        printf("3. Borrow a book\n");
+        printf("4. Return a book\n");
+        printf("5. Display my borrowed books\n");
+        printf("6. Exit\n");
+        printf("========================================\n");
+        printf("Enter your choice: ");
+        
+        choice = getIntInput();
+        clearInputBuffer();
+        
+        switch (choice) {
+            case 1:
+                displayAllBooks();
+                break;
+            case 2:
+                displayAvailableBooks();
+                break;
+            case 3:
+                borrowBook(username);
+                break;
+            case 4:
+                returnBook(username);
+                break;
+            case 5:
+                displayMyBorrowedBooks(username);
+                break;
+            case 6:
+                printf("Thank you for using the Library Management System!\n");
+                return;
+            default:
+                printf("Error: Invalid choice! Please try again.\n");
+        }
+    }
+}
+
+// Main function
+int main() {
+    int choice;
+    char username[MAX_STRING];
+    
+    // Initialize available_books.txt if needed
+    initializeAvailableBooks();
+    
+    while (1) {
+        displayAuthMenu();
+        choice = getIntInput();
+        clearInputBuffer();
+        
+        switch (choice) {
+            case 1:
+                registerUser();
+                break;
+            case 2:
+                if (loginUser(username)) {
+                    displayUserMenu(username);
+                }
+                break;
+            case 3:
+                if (loginAdmin()) {
+                    printf("Admin panel features coming soon!\n");
+                }
+                break;
+            case 4:
+                printf("Thank you for using the Library Management System!\n");
+                exit(0);
+            default:
+                printf("Error: Invalid choice! Please try again.\n");
+        }
+    }
+    
+    return 0;
 }
 
