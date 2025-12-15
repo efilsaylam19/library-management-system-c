@@ -3,4 +3,98 @@
 3;To Kill a Mockingbird;Harper Lee
 4;Moby-Dick;Herman Melville
 5;War and Peace;Leo Tolstoy
-
+6;Crime and Punishment;Fyodor Dostoevsky
+7;The Great Gatsby;F. Scott Fitzgerald
+8;Jane Eyre;Charlotte Brontë
+9;Wuthering Heights;Emily Brontë
+10;The Catcher in the Rye;J.D. Salinger
+11;The Odyssey;Homer
+12;The Iliad;Homer
+13;Brave New World;Aldous Huxley
+14;Fahrenheit 451;Ray Bradbury
+15;The Brothers Karamazov;Fyodor Dostoevsky
+16;Anna Karenina;Leo Tolstoy
+17;The Divine Comedy;Dante Alighieri
+18;Les Misérables;Victor Hugo
+19;Dracula;Bram Stoker
+20;Frankenstein;Mary Shelley
+21;The Picture of Dorian Gray;Oscar Wilde
+22;Don Quixote;Miguel de Cervantes
+23;The Count of Monte Cristo;Alexandre Dumas
+24;The Old Man and the Sea;Ernest Hemingway
+25;A Tale of Two Cities;Charles Dickens
+26;Great Expectations;Charles Dickens
+27;Oliver Twist;Charles Dickens
+28;The Hobbit;J.R.R. Tolkien
+29;The Lord of the Rings;J.R.R. Tolkien
+30;The Alchemist;Paulo Coelho
+31;The Stranger;Albert Camus
+32;The Trial;Franz Kafka
+33;The Metamorphosis;Franz Kafka
+34;Lolita;Vladimir Nabokov
+35;Slaughterhouse-Five;Kurt Vonnegut
+36;Of Mice and Men;John Steinbeck
+37;East of Eden;John Steinbeck
+38;The Sun Also Rises;Ernest Hemingway
+39;The Sound and the Fury;William Faulkner
+40;Ulysses;James Joyce
+41;Heart of Darkness;Joseph Conrad
+42;The Grapes of Wrath;John Steinbeck
+43;Madame Bovary;Gustave Flaubert
+44;The Scarlet Letter;Nathaniel Hawthorne
+45;The Hunchback of Notre-Dame;Victor Hugo
+46;The Time Machine;H.G. Wells
+47;The War of the Worlds;H.G. Wells
+48;The Call of the Wild;Jack London
+49;White Fang;Jack London
+50;Treasure Island;Robert Louis Stevenson
+51;Gulliver's Travels;Jonathan Swift
+52;Robinson Crusoe;Daniel Defoe
+53;The Prince;Niccolò Machiavelli
+54;Thus Spoke Zarathustra;Friedrich Nietzsche
+55;The Republic;Plato
+56;Meditations;Marcus Aurelius
+57;The Art of War;Sun Tzu
+58;Candide;Voltaire
+59;The Trial of God;Elie Wiesel
+60;One Hundred Years of Solitude;Gabriel García Márquez
+61;Love in the Time of Cholera;Gabriel García Márquez
+62;The Name of the Rose;Umberto Eco
+63;The Stranger Beside Me;Ann Rule
+64;The Road;Cormac McCarthy
+65;The Handmaid's Tale;Margaret Atwood
+66;Animal Farm;George Orwell
+67;The Bell Jar;Sylvia Plath
+68;The Color Purple;Alice Walker
+69;Rebecca;Daphne du Maurier
+70;The Little Prince;Antoine de Saint-Exupéry
+71;The Outsiders;S.E. Hinton
+72;A Clockwork Orange;Anthony Burgess
+73;The Kite Runner;Khaled Hosseini
+74;Life of Pi;Yann Martel
+75;The Book Thief;Markus Zusak
+76;The Shining;Stephen King
+77;It;Stephen King
+78;The Stand;Stephen King
+79;Dune;Frank Herbert
+80;Foundation;Isaac Asimov
+81;Neuromancer;William Gibson
+82;Snow Crash;Neal Stephenson
+83;The Left Hand of Darkness;Ursula K. Le Guin
+84;Do Androids Dream of Electric Sheep?;Philip K. Dick
+85;The Martian Chronicles;Ray Bradbury
+86;The Invisible Man;H.G. Wells
+87;The Jungle;Upton Sinclair
+88;The Road to Wigan Pier;George Orwell
+89;On the Road;Jack Kerouac
+90;Catch-22;Joseph Heller
+91;Beloved;Toni Morrison
+92;Invisible Man;Ralph Ellison
+93;The Plague;Albert Camus
+94;The Fall;Albert Camus
+95;A Farewell to Arms;Ernest Hemingway
+96;The Silmarillion;J.R.R. Tolkien
+97;Sense and Sensibility;Jane Austen
+98;Emma;Jane Austen
+99;Persuasion;Jane Austen
+100;Northanger Abbey;Jane Austen
