@@ -2,9 +2,10 @@
 
 // Global variables (removed unused variable)
 
-// Clear input buffer
+// Clear input buffer - clears any leftover characters
 void clearInputBuffer() {
     int c;
+    // Clear all characters until newline or EOF
     while ((c = getchar()) != '\n' && c != EOF);
 }
 
@@ -12,11 +13,26 @@ void clearInputBuffer() {
 int getIntInput() {
     int value;
     char buffer[100];
-    if (fgets(buffer, sizeof(buffer), stdin) != NULL) {
-        if (sscanf(buffer, "%d", &value) == 1) {
-            return value;
-        }
+    char *result;
+    
+    // Read the entire line including newline
+    result = fgets(buffer, sizeof(buffer), stdin);
+    if (result == NULL) {
+        return -1;
     }
+    
+    // Remove trailing newline, carriage return, and whitespace
+    size_t len = strlen(buffer);
+    while (len > 0 && (buffer[len-1] == '\n' || buffer[len-1] == '\r' || isspace((unsigned char)buffer[len-1]))) {
+        buffer[len-1] = '\0';
+        len--;
+    }
+    
+    // Try to parse integer from the buffer
+    if (sscanf(buffer, "%d", &value) == 1) {
+        return value;
+    }
+    
     return -1;
 }
 
@@ -76,10 +92,16 @@ int registerUser() {
     User existing_user;
     int user_exists = 0;
     
-    printf("\n=== User Registration ===\n");
+    printf("=== User Registration ===\n");
     printf("Enter username: ");
-    fgets(new_user.username, MAX_STRING, stdin);
-    trimString(new_user.username);
+    fflush(stdout);
+    // Read input, skipping any empty lines
+    do {
+        if (fgets(new_user.username, MAX_STRING, stdin) == NULL) {
+            return 0;
+        }
+        trimString(new_user.username);
+    } while (strlen(new_user.username) == 0);
     
     if (strlen(new_user.username) == 0) {
         printf("Error: Username cannot be empty!\n");
@@ -104,8 +126,14 @@ int registerUser() {
     }
     
     printf("Enter password: ");
-    fgets(new_user.password, MAX_STRING, stdin);
-    trimString(new_user.password);
+    fflush(stdout);
+    // Read input, skipping any empty lines
+    do {
+        if (fgets(new_user.password, MAX_STRING, stdin) == NULL) {
+            return 0;
+        }
+        trimString(new_user.password);
+    } while (strlen(new_user.password) == 0);
     
     if (strlen(new_user.password) == 0) {
         printf("Error: Password cannot be empty!\n");
@@ -133,14 +161,26 @@ int loginUser(char *username) {
     User user;
     FILE *file;
     
-    printf("\n=== User Login ===\n");
+    printf("=== User Login ===\n");
     printf("Enter username: ");
-    fgets(input_username, MAX_STRING, stdin);
-    trimString(input_username);
+    fflush(stdout);
+    // Read input, skipping any empty lines
+    do {
+        if (fgets(input_username, MAX_STRING, stdin) == NULL) {
+            return 0;
+        }
+        trimString(input_username);
+    } while (strlen(input_username) == 0);
     
     printf("Enter password: ");
-    fgets(input_password, MAX_STRING, stdin);
-    trimString(input_password);
+    fflush(stdout);
+    // Read input, skipping any empty lines
+    do {
+        if (fgets(input_password, MAX_STRING, stdin) == NULL) {
+            return 0;
+        }
+        trimString(input_password);
+    } while (strlen(input_password) == 0);
     
     file = fopen(USERS_FILE, "r");
     if (file == NULL) {
@@ -168,14 +208,26 @@ int loginAdmin() {
     char input_username[MAX_STRING];
     char input_password[MAX_STRING];
     
-    printf("\n=== Admin Login ===\n");
+    printf("=== Admin Login ===\n");
     printf("Enter username: ");
-    fgets(input_username, MAX_STRING, stdin);
-    trimString(input_username);
+    fflush(stdout);
+    // Read input, skipping any empty lines
+    do {
+        if (fgets(input_username, MAX_STRING, stdin) == NULL) {
+            return 0;
+        }
+        trimString(input_username);
+    } while (strlen(input_username) == 0);
     
     printf("Enter password: ");
-    fgets(input_password, MAX_STRING, stdin);
-    trimString(input_password);
+    fflush(stdout);
+    // Read input, skipping any empty lines
+    do {
+        if (fgets(input_password, MAX_STRING, stdin) == NULL) {
+            return 0;
+        }
+        trimString(input_password);
+    } while (strlen(input_password) == 0);
     
     if (strcmp(input_username, ADMIN_USERNAME) == 0 && 
         strcmp(input_password, ADMIN_PASSWORD) == 0) {
@@ -199,6 +251,7 @@ void displayAuthMenu() {
     printf("4. Exit\n");
     printf("========================================\n");
     printf("Enter your choice: ");
+    fflush(stdout);
 }
 
 // Load all books from books.txt
@@ -432,8 +485,8 @@ void borrowBook(const char *username) {
     displayAvailableBooks();
     
     printf("Enter book ID to borrow: ");
+    fflush(stdout);
     book_id = getIntInput();
-    clearInputBuffer();
     
     if (book_id <= 0) {
         printf("Error: Invalid book ID!\n");
@@ -497,8 +550,8 @@ void returnBook(const char *username) {
     displayMyBorrowedBooks(username);
     
     printf("Enter book ID to return: ");
+    fflush(stdout);
     book_id = getIntInput();
-    clearInputBuffer();
     
     if (book_id <= 0) {
         printf("Error: Invalid book ID!\n");
@@ -595,9 +648,8 @@ void displayUserMenu(const char *username) {
         printf("6. Exit\n");
         printf("========================================\n");
         printf("Enter your choice: ");
-        
+        fflush(stdout);
         choice = getIntInput();
-        clearInputBuffer();
         
         switch (choice) {
             case 1:
@@ -635,7 +687,6 @@ int main() {
     while (1) {
         displayAuthMenu();
         choice = getIntInput();
-        clearInputBuffer();
         
         switch (choice) {
             case 1:
