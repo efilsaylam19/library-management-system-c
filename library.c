@@ -15,7 +15,7 @@ int getIntInput() {
     char buffer[100];
     char *result;
     
-    // Read the entire line including newline
+    // Read the entire line including newline - fgets() consumes the newline from stdin
     result = fgets(buffer, sizeof(buffer), stdin);
     if (result == NULL) {
         return -1;
@@ -92,16 +92,12 @@ int registerUser() {
     User existing_user;
     int user_exists = 0;
     
-    printf("=== User Registration ===\n");
-    printf("Enter username: ");
+    printf("=== User Registration ===\nEnter username: ");
     fflush(stdout);
-    // Read input, skipping any empty lines
-    do {
-        if (fgets(new_user.username, MAX_STRING, stdin) == NULL) {
-            return 0;
-        }
-        trimString(new_user.username);
-    } while (strlen(new_user.username) == 0);
+    if (fgets(new_user.username, MAX_STRING, stdin) == NULL) {
+        return 0;
+    }
+    trimString(new_user.username);
     
     if (strlen(new_user.username) == 0) {
         printf("Error: Username cannot be empty!\n");
@@ -127,13 +123,10 @@ int registerUser() {
     
     printf("Enter password: ");
     fflush(stdout);
-    // Read input, skipping any empty lines
-    do {
-        if (fgets(new_user.password, MAX_STRING, stdin) == NULL) {
-            return 0;
-        }
-        trimString(new_user.password);
-    } while (strlen(new_user.password) == 0);
+    if (fgets(new_user.password, MAX_STRING, stdin) == NULL) {
+        return 0;
+    }
+    trimString(new_user.password);
     
     if (strlen(new_user.password) == 0) {
         printf("Error: Password cannot be empty!\n");
@@ -161,26 +154,19 @@ int loginUser(char *username) {
     User user;
     FILE *file;
     
-    printf("=== User Login ===\n");
-    printf("Enter username: ");
+    printf("=== User Login ===\nEnter username: ");
     fflush(stdout);
-    // Read input, skipping any empty lines
-    do {
-        if (fgets(input_username, MAX_STRING, stdin) == NULL) {
-            return 0;
-        }
-        trimString(input_username);
-    } while (strlen(input_username) == 0);
+    if (fgets(input_username, MAX_STRING, stdin) == NULL) {
+        return 0;
+    }
+    trimString(input_username);
     
     printf("Enter password: ");
     fflush(stdout);
-    // Read input, skipping any empty lines
-    do {
-        if (fgets(input_password, MAX_STRING, stdin) == NULL) {
-            return 0;
-        }
-        trimString(input_password);
-    } while (strlen(input_password) == 0);
+    if (fgets(input_password, MAX_STRING, stdin) == NULL) {
+        return 0;
+    }
+    trimString(input_password);
     
     file = fopen(USERS_FILE, "r");
     if (file == NULL) {
@@ -208,26 +194,19 @@ int loginAdmin() {
     char input_username[MAX_STRING];
     char input_password[MAX_STRING];
     
-    printf("=== Admin Login ===\n");
-    printf("Enter username: ");
+    printf("=== Admin Login ===\nEnter username: ");
     fflush(stdout);
-    // Read input, skipping any empty lines
-    do {
-        if (fgets(input_username, MAX_STRING, stdin) == NULL) {
-            return 0;
-        }
-        trimString(input_username);
-    } while (strlen(input_username) == 0);
+    if (fgets(input_username, MAX_STRING, stdin) == NULL) {
+        return 0;
+    }
+    trimString(input_username);
     
     printf("Enter password: ");
     fflush(stdout);
-    // Read input, skipping any empty lines
-    do {
-        if (fgets(input_password, MAX_STRING, stdin) == NULL) {
-            return 0;
-        }
-        trimString(input_password);
-    } while (strlen(input_password) == 0);
+    if (fgets(input_password, MAX_STRING, stdin) == NULL) {
+        return 0;
+    }
+    trimString(input_password);
     
     if (strcmp(input_username, ADMIN_USERNAME) == 0 && 
         strcmp(input_password, ADMIN_PASSWORD) == 0) {
