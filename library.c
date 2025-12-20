@@ -21,8 +21,15 @@ int getIntInput() {
         return -1;
     }
     
-    // Remove trailing newline, carriage return, and whitespace
+    // Check if fgets() read a complete line (ends with newline)
+    // If buffer is full and doesn't end with newline, clear the rest of the line
     size_t len = strlen(buffer);
+    if (len > 0 && buffer[len-1] != '\n' && len == sizeof(buffer) - 1) {
+        // Buffer was filled, clear remaining input
+        clearInputBuffer();
+    }
+    
+    // Remove trailing newline, carriage return, and whitespace
     while (len > 0 && (buffer[len-1] == '\n' || buffer[len-1] == '\r' || isspace((unsigned char)buffer[len-1]))) {
         buffer[len-1] = '\0';
         len--;
@@ -156,10 +163,13 @@ int loginUser(char *username) {
     
     printf("=== User Login ===\nEnter username: ");
     fflush(stdout);
-    if (fgets(input_username, MAX_STRING, stdin) == NULL) {
-        return 0;
-    }
-    trimString(input_username);
+    // Skip any empty lines (leftover newlines from previous input)
+    do {
+        if (fgets(input_username, MAX_STRING, stdin) == NULL) {
+            return 0;
+        }
+        trimString(input_username);
+    } while (strlen(input_username) == 0);
     
     printf("Enter password: ");
     fflush(stdout);
@@ -196,10 +206,13 @@ int loginAdmin() {
     
     printf("=== Admin Login ===\nEnter username: ");
     fflush(stdout);
-    if (fgets(input_username, MAX_STRING, stdin) == NULL) {
-        return 0;
-    }
-    trimString(input_username);
+    // Skip any empty lines (leftover newlines from previous input)
+    do {
+        if (fgets(input_username, MAX_STRING, stdin) == NULL) {
+            return 0;
+        }
+        trimString(input_username);
+    } while (strlen(input_username) == 0);
     
     printf("Enter password: ");
     fflush(stdout);
